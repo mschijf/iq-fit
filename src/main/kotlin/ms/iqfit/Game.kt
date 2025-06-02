@@ -29,64 +29,58 @@ class Game {
         val emptyFields = pointMap.filter { it.value == "." }.keys
         val usedPiecesSymbols = pointMap.values.filter { it != "." }.toSet()
         val usedPieces = pieces.filter {it.shortName in usedPiecesSymbols}
-        solve(emptyFields, (pieces - usedPieces).toSet(), emptyList())
+        val placedPieces = solve(emptyFields, (pieces - usedPieces).toSet(), emptyList())
+        val placedPiecesMap = placedPieces.flatMap { (piece, pieceState, field) ->
+            pieceState.pointList.map {pieceStatePoint -> field + pieceStatePoint to piece.shortName }
+        }.toMap()
+        placedPiecesMap.keys.printAsGrid { placedPiecesMap.getOrDefault(it, " ").padEnd(4, ' ') }
     }
 
-    fun solve(emptyFields: Set<Point>, piecesToPlace:Set<Piece>, placedPieces: List<Triple<String, PieceState, Point>>): Boolean {
+    fun solve(emptyFields: Set<Point>, piecesToPlace:Set<Piece>, placedPieces: List<PlacedPiece>): List<PlacedPiece> {
         if (piecesToPlace.isEmpty() && emptyFields.isEmpty()) {
-            val placedPiecesMap = placedPieces.flatMap { (shortName, pieceState, field) ->
-                pieceState.pointList.map {pieceStatePoint -> field + pieceStatePoint to shortName }
-            }.toMap()
-            placedPiecesMap.keys.printAsGrid { placedPiecesMap.getOrDefault(it, " ").padEnd(4, ' ') }
-            println("==============================================")
-            return true
+            return placedPieces
         }
         if (piecesToPlace.isEmpty() || emptyFields.isEmpty()) {
-            return false
+            return emptyList()
         }
 
-        piecesToPlace.forEach { piece ->
-            piece.pieceStateList.forEach { pieceState ->
-                emptyFields.forEach { emptyField ->
-                    if (pieceStateFitsInField(pieceState,emptyField, emptyFields)) {
-                        val pieceStateFields = pieceState.pointList.map {pieceStatePoint -> emptyField + pieceStatePoint}
-                        val solvable = solve(emptyFields - pieceStateFields,
-                            piecesToPlace - piece,
-                            placedPieces+Triple(piece.shortName, pieceState, emptyField)
-                        )
-                        if (solvable) {
-                            return true
-                        }
-                    }
-                }
+        val tryField = findMostDifficultField(emptyFields)
+        val candidates = findMatchingPieceStates(piecesToPlace, tryField, emptyFields)
+        candidates.forEach { (startField, piece, pieceState) ->
+            val pieceStateFields = pieceState.pointList.map {pieceStatePoint -> startField + pieceStatePoint}
+            val solution = solve(emptyFields - pieceStateFields,
+                piecesToPlace - piece,
+                placedPieces+ PlacedPiece(piece, pieceState, startField),
+            )
+            if (solution.isNotEmpty()) {
+                return solution
             }
         }
-        return false
+
+        return emptyList()
     }
 
     private fun findMostDifficultField(emptyFields: Set<Point>): Point {
         return emptyFields.minBy { emptyField -> emptyField.neighbors().count{ it in emptyFields } }
     }
 
-    private fun findMatchingPieceStates(pieces:List<Piece>, field: Point, emptyFields: Set<Point>): List<Triple<Point, Piece, PieceState>> {
+    private fun findMatchingPieceStates(pieces:Set<Piece>, field: Point, emptyFields: Set<Point>): List<Triple<Point, Piece, PieceState>> {
         val result = mutableListOf<Triple<Point, Piece, PieceState>>()
-        val piece = pieces.first()
-        val pieceState = piece.pieceStateList.first()
-        pieceState.pointList.forEach { checkPoint ->
-            val diff = field - checkPoint
-            if (pieceState.pointList.all {(it + diff) in emptyFields} ) {
-                result += Triple(diff, piece, pieceState)
+        pieces.forEach { piece ->
+            piece.pieceStateList.forEach { pieceState ->
+                pieceState.pointList.forEach { checkPoint ->
+                    val diff = field - checkPoint
+                    if (pieceState.pointList.all {(it + diff) in emptyFields} ) {
+                        result += Triple(diff, piece, pieceState)
+                    }
+                }
             }
         }
         return result
-    }
-
-
-    private fun pieceStateFitsInField(pieceState: PieceState, field: Point, emptyFields: Set<Point>): Boolean {
-        return pieceState.pointList.all {pieceStatePoint -> field + pieceStatePoint in emptyFields}
     }
 
     fun readFileFromResource(path: String, fileName: String)
             = javaClass.getResourceAsStream(path + fileName)!!.bufferedReader().readLines()
 }
 
+data class PlacedPiece(val piece: Piece, val pieceState: PieceState, val onBoardField: Point)
