@@ -4,11 +4,12 @@ import tool.coordinate.twodimensional.Point
 import tool.coordinate.twodimensional.pos
 import tool.coordinate.twodimensional.printAsGrid
 
-class Game {
+class Game(private val puzzleName: String) {
 
     private val pieces = initPieces()
+    private val puzzleMap = initPuzzle()
 
-    fun initPieces(): List<Piece> {
+    private fun initPieces(): List<Piece> {
         val inputLines = readFileFromResource(path="/",fileName="PieceForms")
         val pieceList = inputLines
             .filter{ it.isNotBlank() }.chunked(5)
@@ -16,20 +17,23 @@ class Game {
         return pieceList
     }
 
-    fun solvePuzzle(puzzleName:String) {
+    private fun initPuzzle(): Map<Point, String> {
         val inputLines = readFileFromResource(path="/",fileName=puzzleName)
-        val pointMap = inputLines
+        return inputLines
             .flatMapIndexed { y, line ->
                 line.chunked(3).mapIndexed { x, str -> pos(x,y) to str.trim() }
             }.toMap()
+    }
 
-        pointMap.printAsGrid { it.padEnd(4, ' ') }
+    fun solvePuzzle() {
+        puzzleMap.printAsGrid { it.padEnd(4, ' ') }
         println()
 
-        val emptyFields = pointMap.filter { it.value == "." }.keys
-        val usedPiecesSymbols = pointMap.values.filter { it != "." }.toSet()
-        val usedPieces = pieces.filter {it.shortName in usedPiecesSymbols}
+        val emptyFields = puzzleMap.filter { it.value == "." }.keys
+        val usedPieces = pieces.filter {it.shortName in puzzleMap.values}
+
         val placedPieces = solve(emptyFields, (pieces - usedPieces).toSet(), emptyList())
+
         val placedPiecesMap = placedPieces.flatMap { (piece, pieceState, field) ->
             pieceState.pointList.map {pieceStatePoint -> field + pieceStatePoint to piece.shortName }
         }.toMap()
