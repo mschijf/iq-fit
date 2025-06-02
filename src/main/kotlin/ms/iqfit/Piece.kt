@@ -1,6 +1,6 @@
 package ms.iqfit
 
-val nameMap = mapOf<String, String>(
+val nameMap = mapOf(
     "light green" to "Lg",
     "dark blue" to "Db",
     "blue" to "Bl",

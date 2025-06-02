@@ -1,6 +1,5 @@
 package ms.iqfit
 
-import com.sun.swing.internal.plaf.synth.resources.synth_ja
 import tool.coordinate.twodimensional.Point
 import tool.coordinate.twodimensional.pos
 import tool.coordinate.twodimensional.printAsGrid
@@ -33,14 +32,17 @@ class Game {
         solve(emptyFields, (pieces - usedPieces).toSet(), emptyList())
     }
 
-    fun solve(emptyFields: Set<Point>, piecesToPlace:Set<Piece>, placedPieces: List<Triple<String, PieceState, Point>>) {
+    fun solve(emptyFields: Set<Point>, piecesToPlace:Set<Piece>, placedPieces: List<Triple<String, PieceState, Point>>): Boolean {
         if (piecesToPlace.isEmpty() && emptyFields.isEmpty()) {
             val placedPiecesMap = placedPieces.flatMap { (shortName, pieceState, field) ->
                 pieceState.pointList.map {pieceStatePoint -> field + pieceStatePoint to shortName }
             }.toMap()
-            placedPiecesMap.printAsGrid(default = "") { it.padEnd(4, ' ') }
+            placedPiecesMap.keys.printAsGrid { placedPiecesMap.getOrDefault(it, " ").padEnd(4, ' ') }
             println("==============================================")
-            return
+            return true
+        }
+        if (piecesToPlace.isEmpty() || emptyFields.isEmpty()) {
+            return false
         }
 
         piecesToPlace.forEach { piece ->
@@ -48,15 +50,37 @@ class Game {
                 emptyFields.forEach { emptyField ->
                     if (pieceStateFitsInField(pieceState,emptyField, emptyFields)) {
                         val pieceStateFields = pieceState.pointList.map {pieceStatePoint -> emptyField + pieceStatePoint}
-                        solve(emptyFields - pieceStateFields,
+                        val solvable = solve(emptyFields - pieceStateFields,
                             piecesToPlace - piece,
                             placedPieces+Triple(piece.shortName, pieceState, emptyField)
                         )
+                        if (solvable) {
+                            return true
+                        }
                     }
                 }
             }
         }
+        return false
     }
+
+    private fun findMostDifficultField(emptyFields: Set<Point>): Point {
+        return emptyFields.minBy { emptyField -> emptyField.neighbors().count{ it in emptyFields } }
+    }
+
+    private fun findMatchingPieceStates(pieces:List<Piece>, field: Point, emptyFields: Set<Point>): List<Triple<Point, Piece, PieceState>> {
+        val result = mutableListOf<Triple<Point, Piece, PieceState>>()
+        val piece = pieces.first()
+        val pieceState = piece.pieceStateList.first()
+        pieceState.pointList.forEach { checkPoint ->
+            val diff = field - checkPoint
+            if (pieceState.pointList.all {(it + diff) in emptyFields} ) {
+                result += Triple(diff, piece, pieceState)
+            }
+        }
+        return result
+    }
+
 
     private fun pieceStateFitsInField(pieceState: PieceState, field: Point, emptyFields: Set<Point>): Boolean {
         return pieceState.pointList.all {pieceStatePoint -> field + pieceStatePoint in emptyFields}
