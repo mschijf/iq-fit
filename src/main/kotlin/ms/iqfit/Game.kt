@@ -32,15 +32,30 @@ class Game(private val puzzleName: String) {
         val emptyFields = puzzleMap.filter { it.value == "." }.keys
         val usedPieces = pieces.filter {it.shortName in puzzleMap.values}
 
-        val placedPieces = solve(emptyFields, (pieces - usedPieces).toSet(), emptyList())
+        val placedPieces = solveFirst(emptyFields, (pieces - usedPieces).toSet(), emptyList())
 
         val placedPiecesMap = placedPieces.flatMap { (piece, pieceState, field) ->
             pieceState.pointList.map {pieceStatePoint -> field + pieceStatePoint to piece.shortName }
         }.toMap()
         placedPiecesMap.keys.printAsGrid { placedPiecesMap.getOrDefault(it, " ").padEnd(4, ' ') }
+
+
+        println("===============================================================")
+        println("===============================================================")
+        println("===============================================================")
+
+        val result = solveAll(emptyFields, (pieces - usedPieces).toSet())
+        println(result.size)
+        result.forEach { placedPieces ->
+            println("===============================================================")
+            val placedPiecesMap = placedPieces.flatMap { (piece, pieceState, field) ->
+                pieceState.pointList.map {pieceStatePoint -> field + pieceStatePoint to piece.shortName }
+            }.toMap()
+            placedPiecesMap.keys.printAsGrid { placedPiecesMap.getOrDefault(it, " ").padEnd(4, ' ') }
+        }
     }
 
-    private fun solve(emptyFields: Set<Point>, piecesToPlace:Set<Piece>, placedPieces: List<PlacedPiece>): List<PlacedPiece> {
+    private fun solveFirst(emptyFields: Set<Point>, piecesToPlace:Set<Piece>, placedPieces: List<PlacedPiece>): List<PlacedPiece> {
         if (piecesToPlace.isEmpty() && emptyFields.isEmpty()) {
             return placedPieces
         }
@@ -52,7 +67,7 @@ class Game(private val puzzleName: String) {
         val candidates = findMatchingPieceStateCandidates(piecesToPlace, tryField, emptyFields)
         candidates.forEach { (piece, pieceState, startField) ->
             val pieceStateFields = pieceState.pointList.map {pieceStatePoint -> startField + pieceStatePoint}
-            val solution = solve(
+            val solution = solveFirst(
                 emptyFields - pieceStateFields,
                 piecesToPlace - piece,
                 placedPieces + PlacedPiece(piece, pieceState, startField),
@@ -64,6 +79,31 @@ class Game(private val puzzleName: String) {
 
         return emptyList()
     }
+
+    private fun solveAll(emptyFields: Set<Point>, piecesToPlace:Set<Piece>): List<List<PlacedPiece>> {
+        if (piecesToPlace.isEmpty() && emptyFields.isEmpty()) {
+            return listOf(emptyList())
+        }
+        if (piecesToPlace.isEmpty() || emptyFields.isEmpty()) {
+            return emptyList()
+        }
+
+        val tryField = findMostDifficultField(emptyFields)
+        val candidates = findMatchingPieceStateCandidates(piecesToPlace, tryField, emptyFields)
+        val resultList = mutableListOf<List<PlacedPiece>>()
+        candidates.forEach { candidate ->
+            val pieceStateFields = candidate.pieceState.pointList.map {pieceStatePoint -> candidate.onBoardField + pieceStatePoint}
+            val solution = solveAll(
+                emptyFields - pieceStateFields,
+                piecesToPlace - candidate.piece
+            )
+            if (solution.isNotEmpty())
+                resultList += solution.map { placedPieces -> placedPieces + candidate }
+        }
+
+        return resultList
+    }
+
 
     private fun findMostDifficultField(emptyFields: Set<Point>): Point {
         return emptyFields.minBy { emptyField -> emptyField.neighbors().count{ it in emptyFields } }
