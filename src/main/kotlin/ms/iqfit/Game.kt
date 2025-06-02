@@ -46,7 +46,7 @@ class Game {
 
         val tryField = findMostDifficultField(emptyFields)
         val candidates = findMatchingPieceStates(piecesToPlace, tryField, emptyFields)
-        candidates.forEach { (startField, piece, pieceState) ->
+        candidates.forEach { (piece, pieceState, startField) ->
             val pieceStateFields = pieceState.pointList.map {pieceStatePoint -> startField + pieceStatePoint}
             val solution = solve(emptyFields - pieceStateFields,
                 piecesToPlace - piece,
@@ -64,14 +64,14 @@ class Game {
         return emptyFields.minBy { emptyField -> emptyField.neighbors().count{ it in emptyFields } }
     }
 
-    private fun findMatchingPieceStates(pieces:Set<Piece>, field: Point, emptyFields: Set<Point>): List<Triple<Point, Piece, PieceState>> {
-        val result = mutableListOf<Triple<Point, Piece, PieceState>>()
+    private fun findMatchingPieceStates(pieces:Set<Piece>, field: Point, emptyFields: Set<Point>): List<PlacedPiece> {
+        val result = mutableListOf<PlacedPiece>()
         pieces.forEach { piece ->
             piece.pieceStateList.forEach { pieceState ->
                 pieceState.pointList.forEach { checkPoint ->
                     val diff = field - checkPoint
                     if (pieceState.pointList.all {(it + diff) in emptyFields} ) {
-                        result += Triple(diff, piece, pieceState)
+                        result += PlacedPiece(piece, pieceState, diff)
                     }
                 }
             }
