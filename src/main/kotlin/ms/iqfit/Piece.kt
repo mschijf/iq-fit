@@ -15,6 +15,8 @@ val nameMap = mapOf(
 
 data class Piece(val name: String, val pieceStateList: List<PieceState>) {
     val shortName: String = nameMap[name]!!
+    val maxPins = pieceStateList.maxOf{it.pointList.size}
+    val minPins = pieceStateList.minOf{it.pointList.size}
 
     companion object {
         fun of(name: String, stateOne: List<String>, stateTwo: List<String>): Piece {

@@ -1,9 +1,11 @@
 import ms.iqfit.Game
 
 fun main() {
-//  Game("PuzzleStarter13").solvePuzzle()
-//  Game("PuzzleExpert51").solvePuzzle()
-//  Game("PuzzleWizard120").solvePuzzle()
-//  Game("PuzzleExpert69").solvePuzzle()
-  Game("PuzzleWizard118").solvePuzzle()
+  val game = Game()
+  game.solvePuzzle("PuzzleStarter13")
+  game.solvePuzzle("PuzzleExpert51")
+  game.solvePuzzle("PuzzleExpert69")
+  game.solvePuzzle("PuzzleWizard118")
+  game.solvePuzzle("PuzzleWizard120")
+  game.countAllPossibilities()
 }
